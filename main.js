@@ -1,131 +1,275 @@
-// Canvas View Easier
-// When player moves, move the canvas with it
+// Click Detect Challenge
 
-// Canvas Setup
+//Canvas Setup
 let cnv = document.getElementById("myCanvas");
 let ctx = cnv.getContext("2d");
-cnv.width = 400;
-cnv.height = 400;
+cnv.width = 800;
+cnv.height = 600;
 
+// Global Variables
+let mouseIsPressed = false;
+let mouseX, mouseY;
 let leftPressed = false;
 let rightPressed = false;
+let upPressed = false;
+let downPressed = false;
+let playerDirection = "up";
+let bulletDirection = "up";
+let mouseMove = false;
 
 // Player Characteristics
 let player = {
-  x: cnv.width / 2,
-  y: 565,
-  w: 25,
-  h: 25,
-  dx: 5,
-  dy: 0,
-  a: 0.1,
-  jumpSpeed: -5,
-  color: "blue"
+    x: cnv.width / 2,
+    y: 550,
+    r: 30,
+    color: "blue"
 };
 
+let line = {
+    w: 5,
+    colour: "red",
+    x1: player.x,
+    y1: player.y,
+    x2: player.x,
+    y2: player.y - player.r
+}
 
-// Global Variables
-let walls = [];
-walls.push({ x: 300, y: 250, w: 100, h: 20 });
-walls.push({ x: 500, y: 275, w: 200, h: 20 });
-walls.push({ x: 700, y: 200, w: 100, h: 20 });
-walls.push({ x: 900, y: 275, w: 200, h: 20 });
-walls.push({ x: 1100, y: 200, w: 100, h: 20 });
-walls.push({ x: 1300, y: 275, w: 200, h: 20 });
-walls.push({ x: 1500, y: 275, w: 200, h: 20 });
+// Circles Array
+let circles = [];
+for (let n = 1; n <= 5; n++) {
+    circles.push(randomCircle());
+}
 
+// Bullets Array
+let bullets = [];
 
-// Draw Function
-window.addEventListener("load", draw);
+window.addEventListener("load", draw)
 
 function draw() {
-  // LOGIC
-  cnv.x = player.x - 200;
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, cnv.width, cnv.height);
 
-  // Horizontal Movement
-   if (rightPressed) {
-    player.x += player.dx;
-  } else if (leftPressed) {
-    player.x -= player.dx;
-  }
+    // Draw Player
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r, 0, 2 * Math.PI)
+    ctx.fill();
 
-  //Vertical Movement
-  player.dy += player.a; // Accelerate
-  player.y += player.dy; // Move
-
-  // Land on Floor
-  if (player.y + player.h > cnv.height) {
-    player.y = cnv.height - player.h;
-    player.dy = 0;
-  }
-
-  // Check Collision with border
-  if (player.x < 0) {
-    player.x = 0;
-  } else if (player.x + player.w > 1750) {
-    player.x = 1750 - player.w;
-  }
- 
-  if (player.x + 200 > 1750) {
-    cnv.x = 1350;
-  } else if (player.x - 200 < 0) {
-    cnv.x = 0;
-  }
-
- //Check if Player collides with any wall
-  for (let i = 0; i <walls.length; i++) {
-    let wall = walls[i];
-    if (player.x < wall.x + wall.w && player.x + player.w > wall.x && player.y < wall.y + wall.h && player.y + player.h > wall.y) {
-      console.log(player.y);
-      player.y = wall.y - player.h;
+    // Change player direction
+    if (leftPressed) {
+        player.x -= 7;
+        playerDirection = "left";
+    } else if (rightPressed) {
+        player.x += 7;
+        playerDirection = "right";
+    } else if (upPressed) {
+        player.y -= 7;
+        playerDirection = "up";
+    } else if (downPressed) {
+        player.y += 7;
+        playerDirection = "down";
     }
-  }
-  
-  // DRAWING
-  // Background
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, cnv.width, cnv.height);
 
-  // Draw Walls
-  ctx.fillStyle = "black";
-  for (let i = 0; i < walls.length; i++) {
-    let wall = walls[i];
-    ctx.fillRect(wall.x - cnv.x, wall.y, wall.w, wall.h);
-  }
+    // Draw line to detect the way player is facing
+    ctx.lineWidth = line.w;
+    ctx.strokeStyle =  `${line.colour}`;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(line.x2, line.y2);
+    ctx.stroke();
 
-  // Draw Player
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x - cnv.x, player.y, player.w, player.h);
+    // Move line to see which direction the line is facing
 
 
+    for (let i = 0; i < circles.length; i++) {
+        let circle = circles[i];
+        drawCircle(circle);
+        moveCircle(circle);
+        
+        // Check if player collides with circle
+        let d = Math.sqrt((player.x - circle.x)**2 + (player.y - circles.y)**2);
+        if (d < player.r + circle.r) {
+          player.r += (circles.r / 8);
+          console.log(circle.length);
+          circles.splice(i, 1);
+        }
+    }
 
-  // Animation Loop
-  requestAnimationFrame(draw);
+    for (let i = 0; i < bullets.length; i++) {
+        let bullet = bullets[i];
+        drawBullet(bullet);
+        moveBullet(bullet);
 
-  // Constrain view and PLAYER at 0 and 1750
-  // view goes back to zero or stays at 1750
+        for (let n = 0; n < circles.length; n++) {
+            let circle = circles[n];
+            let distance = Math.sqrt((bullet.x - circle.x) ** 2 + (bullet.y - circle.y) ** 2);
+
+            if (distance <= bullet.r + circle.r) {
+                // Handle collision, remove the bullet and circle
+                bullets.splice(i, 1);
+                circles.splice(n, 1);
+            }
+ 
+            if (bullet.y < 0) {
+                bullets.splice(i, 1);
+            }
+        }   
+    }
+
+ requestAnimationFrame(draw);
+}
+
+//Circle Stuff
+
+function drawCircle(aCircle) {
+ ctx.lineWidth = 3;   
+ ctx.strokeStyle = `${aCircle.c}`;
+ ctx.beginPath();
+ ctx.arc(aCircle.x, aCircle.y, aCircle.r, 0, 2 * Math.PI)
+ ctx.stroke();
+}
+
+function moveCircle(aCircle) {
+    aCircle.y += aCircle.ys;
+    aCircle.x += aCircle.xs;
+
+    //Check for collisions with canvas boundaries
+    if (aCircle.x - aCircle.r < 0 || aCircle.x + aCircle.r > cnv.width) {
+        aCircle.xs = -aCircle.xs;
+    }
+
+    if (aCircle.y - aCircle.r < 0 || aCircle.y + aCircle.r > cnv.height) {
+        aCircle.ys = -aCircle.ys;
+    }
+}
+
+function randomCircle() {
+   return {
+        x: randomInt(0, cnv.width),
+        y: randomInt(0, cnv.height),
+        r: randomInt(10, 50),
+        xs: randomInt(1, 5),
+        ys: randomInt(1, 5),
+        c: randomRGB()
+    }
+}
+
+// Bullet Stuff
+
+function singleBullet() {
+    return {
+        x: player.x,
+        y: player.y,
+        r: 5,
+        s: 3,
+        c: "white"
+    }
+}  
+
+function drawBullet(aBullet) {
+    ctx.lineWidth = 3;   
+    ctx.fillStyle = `${aBullet.c}`;
+    ctx.beginPath();
+    ctx.arc(aBullet.x, aBullet.y, aBullet.r, 0, 2 * Math.PI)
+    ctx.fill();
+}
+
+function moveBullet(aBullet) {
+    let distance = Math.sqrt((aBullet.x - player.x) ** 2 + (aBullet.y - player.y) ** 2);
+
+    if (distance <= aBullet.r + player.r) {
+        if (bulletDirection === "up") {
+            aBullet.y -= aBullet.s;
+        } else if (bulletDirection === "down") {
+            aBullet.y += aBullet.s;
+        } else if (bulletDirection === "left") {
+            aBullet.x -= aBullet.s;
+        } else if (bulletDirection === "right") {
+            aBullet.x += aBullet.s;
+        }
+    }
+
+    if (bulletDirection === "up") {
+        aBullet.y -= aBullet.s;
+    } else if (bulletDirection === "down") {
+        aBullet.y += aBullet.s;
+    } else if (bulletDirection === "left") {
+        aBullet.x -= aBullet.s;
+    } else if (bulletDirection === "right") {
+        aBullet.x += aBullet.s;
+    }
 }
 
 // Event Listeners & Handlers
 document.addEventListener("keydown", keydownHandler);
 document.addEventListener("keyup", keyupHandler);
+document.addEventListener("mousedown", mousedownHandler);
+document.addEventListener("mouseup", mouseupHandler);
+document.addEventListener("mousemove", mousemoveHandler);
 
 function keydownHandler(e) {
     //Check for keys pressed
-  if (e.code === "ArrowUp") {
-      player.dy = player.jumpSpeed;
-    } else if (e.code === "ArrowLeft") {
-      leftPressed = true;
+  if (e.code === "ArrowLeft") {
+        leftPressed = true;
     } else if (e.code === "ArrowRight") {
-      rightPressed = true;
-  }
+        rightPressed = true;
+    }  else if (e.code === "ArrowUp") {
+        upPressed = true;
+    } else if (e.code === "ArrowDown") {
+        downPressed = true;
+    } 
+
+    if (player.x - player.r < 0) {
+        player.x = player.r;
+    } else if (player.x + player.r > cnv.width) {
+        player.x = cnv.width - player.r;
+    }
 }
 
 function keyupHandler(e) {
     //Check for keys pressed
-  if (e.code === "ArrowLeft") {
-    leftPressed = false;
-  } else if (e.code === "ArrowRight") {
-    rightPressed = false;
-  } 
+   if (e.code === "ArrowLeft") {
+      leftPressed = false;
+    } else if (e.code === "ArrowRight") {
+      rightPressed = false;
+    } else if (e.code === "ArrowUp") {
+        upPressed = false;
+    } else if (e.code === "ArrowDown") {
+        downPressed = false;
+    } 
+}
+
+function mousedownHandler() {
+    mouseIsPressed = true;
+    if (mouseIsPressed) {
+        for (let i = 0; i < 1; i++) {
+            bullets.push(singleBullet());
+        }
+        mouseIsPressed = false;
+    }
+    console.log(bullets.length);
+}
+
+function mouseupHandler() {
+    mouseIsPressed = false;
+}
+      
+function mousemoveHandler(event) {
+  mouseMove = true;
+  // Get rectangle info about canvas location
+  let cnvRect = cnv.getBoundingClientRect(); 
+
+  // Calc mouse coordinates using mouse event and canvas location info
+  mouseX = Math.round(event.clientX - cnvRect.left);
+  mouseY = Math.round(event.clientY - cnvRect.top);
+
+  let run = mouseX - player.x;
+  let rise = mouseY - player.y;
+  let d = Math.sqrt((run)**2 +(rise)**2);
+//   let dx = (run / d);
+//   let dy = (rise / d);
+
+  line.x2 = d - run;
+  line.y2 = d - rise;
+  console.log(line);
 }
