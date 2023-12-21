@@ -234,12 +234,15 @@ function mousemoveHandler(event) {
   mouseX = Math.round(event.clientX - cnvRect.left);
   mouseY = Math.round(event.clientY - cnvRect.top);
 
-  let run = mouseX - player.x;
-  let rise = mouseY - player.y;
-  let slope = (rise/run) * player.x + player.y;
+  let d = dist(mouseX, mouseY, player.x, player.y)
   
-    line.x2 = slope/player.r;
-    line.y2 = slope/player.r;
+    line.x2 = player.x + run;
+    line.y2 = player.y + rise;
 
-  console.log(line);
+  console.log(line.x);
 }
+
+// Determine the distance between two points from the x-values and y-values
+function dist(x1, y1, x2, y2) {
+    return Math.sqrt((x2-x1)**2 +(y2-y1)**2);
+  }
